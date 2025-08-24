@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}情绪详情 - 情绪分享平台{% endblock %}
+
+{% block content %}
+<div class="emotion-detail-container">
+    <!-- 情绪详情卡片 -->
+    <div id="emotionDetailCard" class="emotion-detail-card">
+        <!-- 动态加载情绪详情 -->
+    </div>
+    
+    <!-- 社交互动区域 -->
+    <div class="social-actions">
+        {% if user %}
+            <button id="likeBtn" class="social-btn like-btn">
+                <span class="icon">👍</span>
+                <span class="text">点赞</span>
+                <span id="likeCount" class="count">0</span>
+            </button>
+            
+            <button id="collectBtn" class="social-btn collect-btn">
+                <span class="icon">⭐</span>
+                <span class="text">收藏</span>
+                <span id="collectCount" class="count">0</span>
+            </button>
+            
+            <button id="shareBtn" class="social-btn share-btn">
+                <span class="icon">🔗</span>
+                <span class="text">分享</span>
+            </button>
+        {% else %}
+            <div class="login-prompt">
+                <p>请先登录以进行互动</p>
+                <a href="{{ url_for('auth_login') }}" class="btn btn-primary">GitHub 登录</a>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- 评论区域 -->
+    <div class="comments-section">
+        <div class="comments-header">
+            <h3>评论 (<span id="commentCount">0</span>)</h3>
+            
+            {% if user %}
+                <div class="comment-form">
+                    <div class="comment-input-group">
+                        <img src="{{ user.avatar_url }}" alt="头像" class="avatar-small">
+                        <textarea id="commentInput" placeholder="写下你的想法..." maxlength="500"></textarea>
+                    </div>
+                    <div class="comment-actions">
+                        <div class="char-count">0/500</div>
+                        <button id="submitCommentBtn" class="btn btn-primary">发表评论</button>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div id="commentsList" class="comments-list">
+            <!-- 动态加载评论列表 -->
+        </div>
+        
+        <!-- 加载更多评论 -->
+        <div class="load-more-comments">
+            <button id="loadMoreCommentsBtn" class="btn btn-secondary" style="display: none;">加载更多评论</button>
+        </div>
+    </div>
+</div>
+
+<!-- 分享模态框 -->
+<div id="shareModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>分享情绪</h2>
+            <span class="close">&times;</span>
+        </div>
+        
+        <div class="share-options">
+            <div class="share-option" onclick="copyToClipboard()">
+                <div class="share-icon">🔗</div>
+                <div class="share-text">
+                    <h4>复制链接</h4>
+                    <p>复制链接分享给朋友</p>
+                </div>
+            </div>
+            
+            <div class="share-option" onclick="shareToTwitter()">
+                <div class="share-icon">🐦</div>
+                <div class="share-text">
+                    <h4>分享到 Twitter</h4>
+                    <p>在 Twitter 上分享这个情绪</p>
+                </div>
+            </div>
+            
+            <div class="share-option" onclick="shareToWeibo()">
+                <div class="share-icon">📱</div>
+                <div class="share-text">
+                    <h4>分享到微博</h4>
+                    <p>在微博上分享这个情绪</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="share-url">
+            <label>链接地址:</label>
+            <div class="url-input-group">
+                <input type="text" id="shareUrl" readonly>
+                <button onclick="copyToClipboard()" class="btn btn-secondary">复制</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 举报模态框 -->
+<div id="reportModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>举报内容</h2>
+            <span class="close">&times;</span>
+        </div>
+        
+        <form id="reportForm">
+            <div class="form-group">
+                <label>举报原因:</label>
+                <div class="report-reasons">
+                    <label class="radio-option">
+                        <input type="radio" name="reason" value="spam">
+                        <span>垃圾信息</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="reason" value="inappropriate">
+                        <span>不当内容</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="reason" value="harassment">
+                        <span>骚扰他人</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="reason" value="false_info">
+                        <span>虚假信息</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="reason" value="other">
+                        <span>其他</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="reportDescription">详细说明 (可选):</label>
+                <textarea id="reportDescription" name="description" placeholder="请描述具体问题..." maxlength="200"></textarea>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeReportModal()">取消</button>
+                <button type="submit" class="btn btn-danger">提交举报</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 返回顶部按钮 -->
+<button id="backToTopBtn" class="back-to-top" title="返回顶部">
+    ↑
+</button>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 从URL获取情绪ID
+    const emotionId = {{ emotion_id }};
+</script>
+<script src="{{ url_for('static', filename='js/emotion-detail.js') }}"></script>
+{% endblock %}

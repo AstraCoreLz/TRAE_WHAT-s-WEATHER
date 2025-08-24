@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}个人页面 - {{ user.username }}{% endblock %}
+
+{% block content %}
+<div class="profile-header">
+    <div class="profile-info">
+        <img src="{{ user.avatar_url }}" alt="头像" class="avatar-large">
+        <div class="user-details">
+            <h1>{{ user.username }}</h1>
+            <p class="join-date">加入时间: {{ user.created_at[:10] }}</p>
+            <div class="user-stats">
+                <div class="stat-item">
+                    <span class="stat-number" id="totalEmotions">0</span>
+                    <span class="stat-label">分享的情绪</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number" id="totalLikes">0</span>
+                    <span class="stat-label">获得的点赞</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number" id="totalCollections">0</span>
+                    <span class="stat-label">被收藏次数</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 标签页导航 -->
+<div class="profile-tabs">
+    <button class="tab-btn active" data-tab="emotions">我的情绪</button>
+    <button class="tab-btn" data-tab="collections">我的收藏</button>
+    <button class="tab-btn" data-tab="analytics">情绪分析</button>
+</div>
+
+<!-- 我的情绪标签页 -->
+<div id="emotions-tab" class="tab-content active">
+    <div class="emotions-header">
+        <h2>我的情绪历史</h2>
+        <div class="emotions-filters">
+            <select id="myEmotionFilter">
+                <option value="all">全部情绪</option>
+                <option value="happy">😊 开心</option>
+                <option value="sad">😢 难过</option>
+                <option value="angry">😠 愤怒</option>
+                <option value="excited">🤩 兴奋</option>
+                <option value="calm">😌 平静</option>
+                <option value="anxious">😰 焦虑</option>
+            </select>
+        </div>
+    </div>
+    
+    <div id="myEmotionsList" class="emotions-grid">
+        <!-- 动态加载用户的情绪列表 -->
+    </div>
+</div>
+
+<!-- 我的收藏标签页 -->
+<div id="collections-tab" class="tab-content">
+    <div class="collections-header">
+        <h2>我的收藏</h2>
+        <p class="collections-desc">你收藏的其他用户的情绪分享</p>
+    </div>
+    
+    <div id="myCollectionsList" class="emotions-grid">
+        <!-- 动态加载用户的收藏列表 -->
+    </div>
+</div>
+
+<!-- 情绪分析标签页 -->
+<div id="analytics-tab" class="tab-content">
+    <div class="analytics-header">
+        <h2>情绪分析</h2>
+        <p class="analytics-desc">了解你的情绪模式和趋势</p>
+    </div>
+    
+    <div class="analytics-grid">
+        <!-- 情绪分布图 -->
+        <div class="analytics-card">
+            <h3>情绪分布</h3>
+            <div id="emotionDistribution" class="chart-container">
+                <!-- 情绪分布饼图 -->
+            </div>
+        </div>
+        
+        <!-- 时间趋势图 -->
+        <div class="analytics-card">
+            <h3>情绪趋势</h3>
+            <div id="emotionTrend" class="chart-container">
+                <!-- 情绪时间趋势图 -->
+            </div>
+        </div>
+        
+        <!-- 最常用的情绪 -->
+        <div class="analytics-card">
+            <h3>最常用的情绪</h3>
+            <div id="topEmotions" class="top-emotions-list">
+                <!-- 最常用情绪列表 -->
+            </div>
+        </div>
+        
+        <!-- 活跃时间 -->
+        <div class="analytics-card">
+            <h3>活跃时间分析</h3>
+            <div id="activityPattern" class="activity-pattern">
+                <!-- 活跃时间热力图 -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑情绪模态框 -->
+<div id="editEmotionModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>编辑情绪</h2>
+            <span class="close">&times;</span>
+        </div>
+        
+        <form id="editEmotionForm" class="emotion-form">
+            <input type="hidden" id="editEmotionId">
+            
+            <!-- 情绪选择 -->
+            <div class="form-group">
+                <label>选择情绪:</label>
+                <div class="emotion-grid">
+                    <div class="emotion-option" data-emotion="happy">
+                        <span class="emotion-emoji">😊</span>
+                        <span class="emotion-label">开心</span>
+                    </div>
+                    <div class="emotion-option" data-emotion="sad">
+                        <span class="emotion-emoji">😢</span>
+                        <span class="emotion-label">难过</span>
+                    </div>
+                    <div class="emotion-option" data-emotion="angry">
+                        <span class="emotion-emoji">😠</span>
+                        <span class="emotion-label">愤怒</span>
+                    </div>
+                    <div class="emotion-option" data-emotion="excited">
+                        <span class="emotion-emoji">🤩</span>
+                        <span class="emotion-label">兴奋</span>
+                    </div>
+                    <div class="emotion-option" data-emotion="calm">
+                        <span class="emotion-emoji">😌</span>
+                        <span class="emotion-label">平静</span>
+                    </div>
+                    <div class="emotion-option" data-emotion="anxious">
+                        <span class="emotion-emoji">😰</span>
+                        <span class="emotion-label">焦虑</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 自定义emoji -->
+            <div class="form-group">
+                <label for="editCustomEmoji">或输入自定义emoji:</label>
+                <input type="text" id="editCustomEmoji" name="customEmoji" placeholder="🎉" maxlength="2">
+            </div>
+            
+            <!-- 情绪描述 -->
+            <div class="form-group">
+                <label for="editEmotionText">描述你的感受:</label>
+                <textarea id="editEmotionText" name="emotionText" placeholder="今天发生了什么让你有这种感受..." maxlength="200"></textarea>
+                <div class="char-count">0/200</div>
+            </div>
+            
+            <!-- 隐私设置 -->
+            <div class="form-group privacy-settings">
+                <h3>隐私设置</h3>
+                <div class="privacy-option">
+                    <input type="checkbox" id="editAllowCollection" name="allowCollection">
+                    <label for="editAllowCollection">允许其他用户收藏</label>
+                </div>
+                <div class="privacy-option">
+                    <input type="checkbox" id="editIsPublic" name="isPublic">
+                    <label for="editIsPublic">公开显示详细内容</label>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-danger" id="deleteEmotionBtn">删除</button>
+                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">取消</button>
+                <button type="submit" class="btn btn-primary">保存修改</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/profile.js') }}"></script>
+{% endblock %}

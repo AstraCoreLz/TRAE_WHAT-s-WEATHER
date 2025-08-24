@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block title %}E-Weather - 情绪天气{% endblock %}
+
+{% block content %}
+
+<!-- 情绪分享模态框 -->
+{% if user %}
+<div id="emotionModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>分享你的情绪</h2>
+            <span class="close">&times;</span>
+        </div>
+        
+        <form id="emotionForm" class="emotion-form">
+            <!-- 情绪选择 -->
+            <div class="form-group">
+                <label>选择情绪:</label>
+                <div class="emotion-grid">
+                    <div class="emotion-option" data-emotion="happy">
+                        <span class="emotion-emoji">😊</span>
+                        <span class="emotion-label">开心</span>
+                    </div>
+                    <div class="emotion-option" data-emotion="sad">
+                        <span class="emotion-emoji">😢</span>
+                        <span class="emotion-label">难过</span>
+                    </div>
+                    <div class="emotion-option" data-emotion="angry">
+                        <span class="emotion-emoji">😠</span>
+                        <span class="emotion-label">愤怒</span>
+                    </div>
+                    <div class="emotion-option" data-emotion="excited">
+                        <span class="emotion-emoji">🤩</span>
+                        <span class="emotion-label">兴奋</span>
+                    </div>
+                    <div class="emotion-option" data-emotion="calm">
+                        <span class="emotion-emoji">😌</span>
+                        <span class="emotion-label">平静</span>
+                    </div>
+                    <div class="emotion-option" data-emotion="anxious">
+                        <span class="emotion-emoji">😰</span>
+                        <span class="emotion-label">焦虑</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 自定义emoji -->
+            <div class="form-group">
+                <label for="customEmoji">或输入自定义emoji:</label>
+                <input type="text" id="customEmoji" name="customEmoji" placeholder="🎉" maxlength="2">
+            </div>
+            
+            <!-- 情绪描述 -->
+            <div class="form-group">
+                <label for="emotionText">描述你的感受 (可选):</label>
+                <textarea id="emotionText" name="emotionText" placeholder="今天发生了什么让你有这种感受..." maxlength="200"></textarea>
+                <div class="char-count">0/200</div>
+            </div>
+            
+            <!-- 隐私设置 -->
+            <div class="form-group privacy-settings">
+                <h3>隐私设置</h3>
+                <div class="privacy-option">
+                    <input type="checkbox" id="allowCollection" name="allowCollection" checked>
+                    <label for="allowCollection">允许其他用户收藏</label>
+                </div>
+                <div class="privacy-option">
+                    <input type="checkbox" id="isPublic" name="isPublic" checked>
+                    <label for="isPublic">公开显示详细内容</label>
+                    <small>取消勾选后，其他用户只能在地图上看到emoji，无法查看详细内容</small>
+                </div>
+            </div>
+            
+            <!-- 位置信息 -->
+            <div class="form-group">
+                <button type="button" id="getLocationBtn" class="btn btn-secondary">获取我的位置</button>
+                <div id="locationStatus" class="location-status"></div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+                <button type="submit" class="btn btn-primary">分享情绪</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<!-- 地图容器 -->
+<div class="map-section">
+    <div id="map" class="emotion-map"></div>
+    
+    <!-- 左下角控件 -->
+    <div class="map-controls-left">
+        <button id="emotionFilterBtn" class="circular-btn" title="情绪筛选">
+            <span class="btn-icon">😊</span>
+        </button>
+        <button id="timeFilterBtn" class="circular-btn" title="时间范围">
+            <span class="btn-icon">⏰</span>
+        </button>
+        {% if session.user %}
+        <a href="{{ url_for('add_emotion') }}" id="addEmotionBtn" class="circular-btn" title="添加情绪">
+            <span class="btn-icon">➕</span>
+        </a>
+        {% endif %}
+    </div>
+    
+    <!-- 右下角控件 -->
+    <div class="map-controls-right">
+        <button id="locateBtn" class="circular-btn" title="定位到我的位置">
+            <span class="btn-icon">📍</span>
+        </button>
+        <button id="refreshBtn" class="circular-btn" title="刷新地图">
+            <span class="btn-icon">🔄</span>
+        </button>
+    </div>
+    
+    <!-- 筛选弹出框 -->
+    <div id="emotionFilterPopup" class="filter-popup" style="display: none;">
+        <h4>筛选情绪</h4>
+        <select id="emotionFilter">
+            <option value="all">全部</option>
+            <option value="happy">😊 开心</option>
+            <option value="sad">😢 难过</option>
+            <option value="angry">😠 愤怒</option>
+            <option value="excited">🤩 兴奋</option>
+            <option value="calm">😌 平静</option>
+            <option value="anxious">😰 焦虑</option>
+        </select>
+    </div>
+    
+    <!-- 时间筛选弹出框 -->
+    <div id="timeFilterPopup" class="filter-popup" style="display: none;">
+        <h4>时间范围</h4>
+        <select id="timeFilter">
+            <option value="24h">最近24小时</option>
+            <option value="7d">最近7天</option>
+            <option value="30d">最近30天</option>
+            <option value="all">全部时间</option>
+        </select>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 全局用户状态变量
+window.isUserLoggedIn = {% if user %}true{% else %}false{% endif %};
+window.currentUser = {% if user %}{{ user|tojson }}{% else %}null{% endif %};
+
+// 全局函数：显示登录弹窗
+function showLoginModal() {
+    const loginModal = document.getElementById('loginModal');
+    if (loginModal) {
+        loginModal.style.display = 'block';
+    }
+}
+</script>
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script src="{{ url_for('static', filename='js/emotion.js') }}"></script>
+
+<!-- 登出成功消息处理 -->
+<script>
+// 检查URL参数中的登出成功消息
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('logout') === 'success') {
+        // 显示登出成功消息
+        showLogoutSuccessMessage();
+        
+        // 清除URL参数，避免刷新页面时重复显示消息
+        const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+        window.history.replaceState({path: newUrl}, '', newUrl);
+    }
+    
+    // 检测需要登录提示
+    if (urlParams.get('login_required') === 'true') {
+        // 显示需要登录消息
+        const message = document.createElement('div');
+        message.innerHTML = '请先登录以访问该功能';
+        message.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #f59e0b;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 10000;
+            font-size: 14px;
+            font-weight: 500;
+        `;
+        document.body.appendChild(message);
+        
+        // 5秒后自动消失
+        setTimeout(() => {
+            message.remove();
+        }, 5000);
+        
+        // 清除URL参数
+        urlParams.delete('login_required');
+        const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+        window.history.replaceState({}, '', newUrl);
+    }
+});
+
+// 显示登出成功消息
+function showLogoutSuccessMessage() {
+    // 创建消息元素
+    const messageEl = document.createElement('div');
+    messageEl.className = 'logout-success-message';
+    messageEl.innerHTML = `
+        <div class="message-content">
+            <span class="success-icon">✅</span>
+            <span class="message-text">已成功登出</span>
+        </div>
+    `;
+    
+    // 添加样式
+    messageEl.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #4CAF50;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        font-size: 14px;
+        font-weight: 500;
+        animation: slideInRight 0.3s ease-out;
+        max-width: 300px;
+    `;
+    
+    // 添加动画样式
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .logout-success-message .message-content {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .logout-success-message .success-icon {
+            font-size: 16px;
+        }
+    `;
+    document.head.appendChild(style);
+    
+    // 添加到页面
+    document.body.appendChild(messageEl);
+    
+    // 3秒后自动消失
+    setTimeout(() => {
+        messageEl.style.animation = 'slideInRight 0.3s ease-out reverse';
+        setTimeout(() => {
+            if (messageEl.parentNode) {
+                messageEl.parentNode.removeChild(messageEl);
+            }
+        }, 300);
+    }, 3000);
+}
+</script>
+{% endblock %}

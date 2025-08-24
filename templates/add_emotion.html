@@ -1,0 +1,569 @@
+{% extends "base.html" %}
+
+{% block title %}添加情绪 - 情绪地图{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    /* 确保页面可以正常滚动 */
+    html, body {
+        overflow-x: hidden;
+        overflow-y: auto;
+        background-color: white !important;
+    }
+    
+    /* 移动端滚动优化 */
+    * {
+        -webkit-overflow-scrolling: touch;
+    }
+    .add-emotion-container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 2rem;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        min-height: calc(100vh - 160px);
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: #374151;
+    }
+    
+    .form-input {
+        width: 100%;
+        padding: 0.75rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: border-color 0.2s;
+    }
+    
+    .form-input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .emotion-types {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 1rem;
+        margin-top: 0.5rem;
+    }
+    
+    .emotion-type {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 1rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: white;
+    }
+    
+    .emotion-type:hover {
+        border-color: #3b82f6;
+        background: #f8fafc;
+    }
+    
+    .emotion-type.selected {
+        border-color: #3b82f6;
+        background: #eff6ff;
+    }
+    
+    .emotion-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .emotion-name {
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-align: center;
+    }
+    
+    .intensity-slider {
+        width: 100%;
+        height: 8px;
+        border-radius: 4px;
+        background: #e5e7eb;
+        outline: none;
+        -webkit-appearance: none;
+    }
+    
+    .intensity-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #3b82f6;
+        cursor: pointer;
+    }
+    
+    .intensity-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 0.5rem;
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+    
+    #intensityValue {
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 25px;
+        font-weight: 800;
+        font-size: 1.1rem;
+        border: 3px solid #1e40af;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5), 0 0 0 2px rgba(59, 130, 246, 0.2);
+        transition: all 0.3s ease;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    #intensityValue::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transition: left 0.5s;
+    }
+    
+    #intensityValue:hover::before {
+        left: 100%;
+    }
+    
+    .map-container {
+        height: 300px;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 2px solid #e5e7eb;
+    }
+    
+    .location-info {
+        margin-top: 0.5rem;
+        padding: 0.75rem;
+        background: #f3f4f6;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        color: #374151;
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+    
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+    }
+    
+    .btn-primary {
+        background: #3b82f6;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background: #2563eb;
+    }
+    
+    .btn-secondary {
+        background: #6b7280;
+        color: white;
+    }
+    
+    /* 隐私设置样式 */
+    .privacy-options {
+        display: flex;
+        gap: 1rem;
+        margin-top: 0.5rem;
+    }
+    
+    .privacy-option {
+        flex: 1;
+    }
+    
+    .privacy-option input[type="radio"] {
+        display: none;
+    }
+    
+    .privacy-label {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: white;
+        gap: 0.75rem;
+    }
+    
+    .privacy-label:hover {
+        border-color: #3b82f6;
+        background: #f8fafc;
+    }
+    
+    .privacy-option input[type="radio"]:checked + .privacy-label {
+        border-color: #3b82f6;
+        background: #eff6ff;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .privacy-icon {
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+    
+    .privacy-text {
+        flex: 1;
+    }
+    
+    .privacy-title {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.25rem;
+    }
+    
+    .privacy-desc {
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+    
+    /* 响应式设计 */
+    @media (max-width: 640px) {
+        .privacy-options {
+            flex-direction: column;
+        }
+    }
+    
+    .btn-secondary:hover {
+        background: #4b5563;
+    }
+    
+    .error-message {
+        color: #dc2626;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+    
+    .success-message {
+        color: #059669;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+    
+    .custom-emotion-selector {
+        background: #f8fafc;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-top: 1rem;
+    }
+    
+    .custom-emotions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+        gap: 0.75rem;
+        margin-top: 1rem;
+        max-height: 300px;
+        overflow-y: auto;
+        padding: 0.5rem;
+    }
+    
+    .custom-emotion {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 50px;
+        height: 50px;
+        font-size: 1.5rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 50%;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background: white;
+        user-select: none;
+    }
+    
+    .custom-emotion:hover {
+        border-color: #3b82f6;
+        background: #eff6ff;
+        transform: scale(1.1);
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+    }
+    
+    .custom-emotion.selected {
+        border-color: #3b82f6;
+        background: #3b82f6;
+        color: white;
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="add-emotion-container">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">添加新情绪</h1>
+    
+    <form id="addEmotionForm">
+        <!-- 情绪类型选择 -->
+        <div class="form-group">
+            <label class="form-label">选择情绪类型 *</label>
+            <div class="emotion-types">
+                <div class="emotion-type" data-type="happy">
+                    <div class="emotion-icon">😊</div>
+                    <div class="emotion-name">开心</div>
+                </div>
+                <div class="emotion-type" data-type="sad">
+                    <div class="emotion-icon">😢</div>
+                    <div class="emotion-name">难过</div>
+                </div>
+                <div class="emotion-type" data-type="angry">
+                    <div class="emotion-icon">😠</div>
+                    <div class="emotion-name">愤怒</div>
+                </div>
+                <div class="emotion-type" data-type="anxious">
+                    <div class="emotion-icon">😰</div>
+                    <div class="emotion-name">焦虑</div>
+                </div>
+                <div class="emotion-type" data-type="excited">
+                    <div class="emotion-icon">🤩</div>
+                    <div class="emotion-name">兴奋</div>
+                </div>
+                <div class="emotion-type" data-type="calm">
+                    <div class="emotion-icon">😌</div>
+                    <div class="emotion-name">平静</div>
+                </div>
+                <div class="emotion-type" data-type="confused">
+                    <div class="emotion-icon">😕</div>
+                    <div class="emotion-name">困惑</div>
+                </div>
+                <div class="emotion-type" data-type="grateful">
+                    <div class="emotion-icon">🙏</div>
+                    <div class="emotion-name">感激</div>
+                </div>
+                <div class="emotion-type" data-type="custom">
+                    <div class="emotion-icon">🎭</div>
+                    <div class="emotion-name">自定义</div>
+                </div>
+            </div>
+            
+            <!-- 自定义心情选择器 -->
+            <div id="customEmotionSelector" class="custom-emotion-selector" style="display: none; margin-top: 1rem;">
+                <label class="form-label">选择你的心情表情</label>
+                <div class="custom-emotions-grid">
+                    <div class="custom-emotion" data-emoji="😀">😀</div>
+                    <div class="custom-emotion" data-emoji="😃">😃</div>
+                    <div class="custom-emotion" data-emoji="😄">😄</div>
+                    <div class="custom-emotion" data-emoji="😁">😁</div>
+                    <div class="custom-emotion" data-emoji="😆">😆</div>
+                    <div class="custom-emotion" data-emoji="😅">😅</div>
+                    <div class="custom-emotion" data-emoji="😂">😂</div>
+                    <div class="custom-emotion" data-emoji="🤣">🤣</div>
+                    <div class="custom-emotion" data-emoji="😊">😊</div>
+                    <div class="custom-emotion" data-emoji="😇">😇</div>
+                    <div class="custom-emotion" data-emoji="🙂">🙂</div>
+                    <div class="custom-emotion" data-emoji="🙃">🙃</div>
+                    <div class="custom-emotion" data-emoji="😉">😉</div>
+                    <div class="custom-emotion" data-emoji="😌">😌</div>
+                    <div class="custom-emotion" data-emoji="😍">😍</div>
+                    <div class="custom-emotion" data-emoji="🥰">🥰</div>
+                    <div class="custom-emotion" data-emoji="😘">😘</div>
+                    <div class="custom-emotion" data-emoji="😗">😗</div>
+                    <div class="custom-emotion" data-emoji="😙">😙</div>
+                    <div class="custom-emotion" data-emoji="😚">😚</div>
+                    <div class="custom-emotion" data-emoji="😋">😋</div>
+                    <div class="custom-emotion" data-emoji="😛">😛</div>
+                    <div class="custom-emotion" data-emoji="😝">😝</div>
+                    <div class="custom-emotion" data-emoji="😜">😜</div>
+                    <div class="custom-emotion" data-emoji="🤪">🤪</div>
+                    <div class="custom-emotion" data-emoji="🤨">🤨</div>
+                    <div class="custom-emotion" data-emoji="🧐">🧐</div>
+                    <div class="custom-emotion" data-emoji="🤓">🤓</div>
+                    <div class="custom-emotion" data-emoji="😎">😎</div>
+                    <div class="custom-emotion" data-emoji="🤩">🤩</div>
+                    <div class="custom-emotion" data-emoji="🥳">🥳</div>
+                    <div class="custom-emotion" data-emoji="😏">😏</div>
+                    <div class="custom-emotion" data-emoji="😒">😒</div>
+                    <div class="custom-emotion" data-emoji="😞">😞</div>
+                    <div class="custom-emotion" data-emoji="😔">😔</div>
+                    <div class="custom-emotion" data-emoji="😟">😟</div>
+                    <div class="custom-emotion" data-emoji="😕">😕</div>
+                    <div class="custom-emotion" data-emoji="🙁">🙁</div>
+                    <div class="custom-emotion" data-emoji="☹️">☹️</div>
+                    <div class="custom-emotion" data-emoji="😣">😣</div>
+                    <div class="custom-emotion" data-emoji="😖">😖</div>
+                    <div class="custom-emotion" data-emoji="😫">😫</div>
+                    <div class="custom-emotion" data-emoji="😩">😩</div>
+                    <div class="custom-emotion" data-emoji="🥺">🥺</div>
+                    <div class="custom-emotion" data-emoji="😢">😢</div>
+                    <div class="custom-emotion" data-emoji="😭">😭</div>
+                    <div class="custom-emotion" data-emoji="😤">😤</div>
+                    <div class="custom-emotion" data-emoji="😠">😠</div>
+                    <div class="custom-emotion" data-emoji="😡">😡</div>
+                    <div class="custom-emotion" data-emoji="🤬">🤬</div>
+                    <div class="custom-emotion" data-emoji="🤯">🤯</div>
+                    <div class="custom-emotion" data-emoji="😳">😳</div>
+                    <div class="custom-emotion" data-emoji="🥵">🥵</div>
+                    <div class="custom-emotion" data-emoji="🥶">🥶</div>
+                    <div class="custom-emotion" data-emoji="😱">😱</div>
+                    <div class="custom-emotion" data-emoji="😨">😨</div>
+                    <div class="custom-emotion" data-emoji="😰">😰</div>
+                    <div class="custom-emotion" data-emoji="😥">😥</div>
+                    <div class="custom-emotion" data-emoji="😓">😓</div>
+                    <div class="custom-emotion" data-emoji="🤗">🤗</div>
+                    <div class="custom-emotion" data-emoji="🤔">🤔</div>
+                    <div class="custom-emotion" data-emoji="🤭">🤭</div>
+                    <div class="custom-emotion" data-emoji="🤫">🤫</div>
+                    <div class="custom-emotion" data-emoji="🤥">🤥</div>
+                    <div class="custom-emotion" data-emoji="😶">😶</div>
+                    <div class="custom-emotion" data-emoji="😐">😐</div>
+                    <div class="custom-emotion" data-emoji="😑">😑</div>
+                    <div class="custom-emotion" data-emoji="😬">😬</div>
+                    <div class="custom-emotion" data-emoji="🙄">🙄</div>
+                    <div class="custom-emotion" data-emoji="😯">😯</div>
+                    <div class="custom-emotion" data-emoji="😦">😦</div>
+                    <div class="custom-emotion" data-emoji="😧">😧</div>
+                    <div class="custom-emotion" data-emoji="😮">😮</div>
+                    <div class="custom-emotion" data-emoji="😲">😲</div>
+                    <div class="custom-emotion" data-emoji="🥱">🥱</div>
+                    <div class="custom-emotion" data-emoji="😴">😴</div>
+                    <div class="custom-emotion" data-emoji="🤤">🤤</div>
+                    <div class="custom-emotion" data-emoji="😪">😪</div>
+                    <div class="custom-emotion" data-emoji="😵">😵</div>
+                    <div class="custom-emotion" data-emoji="🤐">🤐</div>
+                    <div class="custom-emotion" data-emoji="🥴">🥴</div>
+                    <div class="custom-emotion" data-emoji="🤢">🤢</div>
+                    <div class="custom-emotion" data-emoji="🤮">🤮</div>
+                    <div class="custom-emotion" data-emoji="🤧">🤧</div>
+                    <div class="custom-emotion" data-emoji="😷">😷</div>
+                    <div class="custom-emotion" data-emoji="🤒">🤒</div>
+                    <div class="custom-emotion" data-emoji="🤕">🤕</div>
+                    <div class="custom-emotion" data-emoji="🤑">🤑</div>
+                    <div class="custom-emotion" data-emoji="🤠">🤠</div>
+                    <div class="custom-emotion" data-emoji="😈">😈</div>
+                    <div class="custom-emotion" data-emoji="👿">👿</div>
+                    <div class="custom-emotion" data-emoji="👹">👹</div>
+                    <div class="custom-emotion" data-emoji="👺">👺</div>
+                    <div class="custom-emotion" data-emoji="🤡">🤡</div>
+                    <div class="custom-emotion" data-emoji="💩">💩</div>
+                    <div class="custom-emotion" data-emoji="👻">👻</div>
+                    <div class="custom-emotion" data-emoji="💀">💀</div>
+                    <div class="custom-emotion" data-emoji="☠️">☠️</div>
+                    <div class="custom-emotion" data-emoji="👽">👽</div>
+                    <div class="custom-emotion" data-emoji="👾">👾</div>
+                    <div class="custom-emotion" data-emoji="🤖">🤖</div>
+                    <div class="custom-emotion" data-emoji="🎃">🎃</div>
+                    <div class="custom-emotion" data-emoji="😺">😺</div>
+                    <div class="custom-emotion" data-emoji="😸">😸</div>
+                    <div class="custom-emotion" data-emoji="😹">😹</div>
+                    <div class="custom-emotion" data-emoji="😻">😻</div>
+                    <div class="custom-emotion" data-emoji="😼">😼</div>
+                    <div class="custom-emotion" data-emoji="😽">😽</div>
+                    <div class="custom-emotion" data-emoji="🙀">🙀</div>
+                    <div class="custom-emotion" data-emoji="😿">😿</div>
+                    <div class="custom-emotion" data-emoji="😾">😾</div>
+                </div>
+            </div>
+            
+            <div id="emotionTypeError" class="error-message" style="display: none;"></div>
+        </div>
+        
+        <!-- 情绪强度 -->
+        <div class="form-group">
+            <label class="form-label">情绪强度 *</label>
+            <input type="range" id="intensitySlider" class="intensity-slider" min="1" max="10" value="5">
+            <div class="intensity-labels">
+                <span>轻微 (1)</span>
+                <span id="intensityValue">中等 (5)</span>
+                <span>强烈 (10)</span>
+            </div>
+        </div>
+        
+        <!-- 情绪描述 -->
+        <div class="form-group">
+            <label for="description" class="form-label">描述你的感受</label>
+            <textarea id="description" class="form-input" rows="4" placeholder="详细描述你当前的情绪和感受..."></textarea>
+        </div>
+        
+        <!-- 隐私设置 -->
+        <div class="form-group">
+            <label class="form-label">隐私设置 *</label>
+            <div class="privacy-options">
+                <div class="privacy-option">
+                    <input type="radio" id="privacyPublic" name="privacy" value="public" checked>
+                    <label for="privacyPublic" class="privacy-label">
+                        <div class="privacy-icon">🌍</div>
+                        <div class="privacy-text">
+                            <div class="privacy-title">公开</div>
+                            <div class="privacy-desc">所有人都可以看到</div>
+                        </div>
+                    </label>
+                </div>
+                <div class="privacy-option">
+                    <input type="radio" id="privacyPrivate" name="privacy" value="private">
+                    <label for="privacyPrivate" class="privacy-label">
+                        <div class="privacy-icon">🔒</div>
+                        <div class="privacy-text">
+                            <div class="privacy-title">私密</div>
+                            <div class="privacy-desc">只有自己可以看到</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 位置选择 -->
+        <div class="form-group">
+            <label class="form-label">选择位置 *</label>
+            <div id="map" class="map-container"></div>
+            <div id="locationInfo" class="location-info">
+                点击地图选择位置，或使用下方按钮获取当前位置
+            </div>
+            <button type="button" id="getCurrentLocation" class="btn btn-secondary" style="margin-top: 2.5rem;">获取当前位置</button>
+            <div id="locationError" class="error-message" style="display: none;"></div>
+        </div>
+        
+        <!-- 提交按钮 -->
+        <div class="btn-group">
+            <button type="submit" class="btn btn-primary">发布情绪</button>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">取消</a>
+        </div>
+        
+        <div id="submitMessage" style="margin-top: 1rem;"></div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{{ url_for('static', filename='js/add-emotion.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OAuth配置诊断 - E-Weather</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen py-8">
+    <div class="container mx-auto px-4 max-w-4xl">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-6">GitHub OAuth配置诊断</h1>
+            
+            <div class="space-y-6">
+                <!-- 配置状态检查 -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h2 class="text-xl font-semibold text-blue-800 mb-4">配置状态检查</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-2">
+                            <div class="flex items-center">
+                                <span class="w-3 h-3 rounded-full mr-2 {{ 'bg-green-500' if github_client_id and github_client_id != 'your_github_client_id_here' else 'bg-red-500' }}"></span>
+                                <span class="font-medium">GitHub Client ID:</span>
+                                <span class="ml-2 text-sm {{ 'text-green-600' if github_client_id and github_client_id != 'your_github_client_id_here' else 'text-red-600' }}">
+                                    {{ '已配置' if github_client_id and github_client_id != 'your_github_client_id_here' else '未配置' }}
+                                </span>
+                            </div>
+                            <div class="text-xs text-gray-600 ml-5">
+                                {{ github_client_id[:10] + '...' if github_client_id and github_client_id != 'your_github_client_id_here' else '请在.env文件中设置GITHUB_CLIENT_ID' }}
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-2">
+                            <div class="flex items-center">
+                                <span class="w-3 h-3 rounded-full mr-2 {{ 'bg-green-500' if github_client_secret and github_client_secret != 'your_github_client_secret_here' else 'bg-red-500' }}"></span>
+                                <span class="font-medium">GitHub Client Secret:</span>
+                                <span class="ml-2 text-sm {{ 'text-green-600' if github_client_secret and github_client_secret != 'your_github_client_secret_here' else 'text-red-600' }}">
+                                    {{ '已配置' if github_client_secret and github_client_secret != 'your_github_client_secret_here' else '未配置' }}
+                                </span>
+                            </div>
+                            <div class="text-xs text-gray-600 ml-5">
+                                {{ '***已设置***' if github_client_secret and github_client_secret != 'your_github_client_secret_here' else '请在.env文件中设置GITHUB_CLIENT_SECRET' }}
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-2">
+                            <div class="flex items-center">
+                                <span class="w-3 h-3 rounded-full mr-2 {{ 'bg-green-500' if github_redirect_uri else 'bg-red-500' }}"></span>
+                                <span class="font-medium">回调URL:</span>
+                                <span class="ml-2 text-sm {{ 'text-green-600' if github_redirect_uri else 'text-red-600' }}">
+                                    {{ '已配置' if github_redirect_uri else '未配置' }}
+                                </span>
+                            </div>
+                            <div class="text-xs text-gray-600 ml-5">
+                                {{ github_redirect_uri if github_redirect_uri else '请在.env文件中设置GITHUB_REDIRECT_URI' }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 配置说明 -->
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <h2 class="text-xl font-semibold text-yellow-800 mb-4">配置说明</h2>
+                    <div class="space-y-3 text-sm text-yellow-700">
+                        <p><strong>1. GitHub OAuth应用设置：</strong></p>
+                        <ul class="list-disc list-inside ml-4 space-y-1">
+                            <li>访问 <a href="https://github.com/settings/applications/new" target="_blank" class="text-blue-600 underline">GitHub Developer Settings</a></li>
+                            <li>创建新的OAuth应用</li>
+                            <li>设置Authorization callback URL为: <code class="bg-gray-200 px-1 rounded">{{ github_redirect_uri or 'http://localhost:5000/login/github/authorized' }}</code></li>
+                        </ul>
+                        
+                        <p><strong>2. 环境变量配置：</strong></p>
+                        <ul class="list-disc list-inside ml-4 space-y-1">
+                            <li>在.env文件中设置 <code class="bg-gray-200 px-1 rounded">GITHUB_CLIENT_ID</code></li>
+                            <li>在.env文件中设置 <code class="bg-gray-200 px-1 rounded">GITHUB_CLIENT_SECRET</code></li>
+                            <li>确保 <code class="bg-gray-200 px-1 rounded">GITHUB_REDIRECT_URI</code> 与GitHub应用设置一致</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- 测试按钮 -->
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <h2 class="text-xl font-semibold text-green-800 mb-4">测试OAuth流程</h2>
+                    <div class="space-y-3">
+                        {% if github_client_id and github_client_id != 'your_github_client_id_here' and github_client_secret and github_client_secret != 'your_github_client_secret_here' %}
+                            <p class="text-green-700">配置看起来正确，可以测试OAuth流程：</p>
+                            <a href="/login/github" class="inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-200">
+                                测试GitHub登录
+                            </a>
+                        {% else %}
+                            <p class="text-red-700">请先完成上述配置，然后重新加载此页面。</p>
+                            <button onclick="location.reload()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200">
+                                重新检查配置
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- 返回首页 -->
+                <div class="text-center">
+                    <a href="/" class="text-blue-600 hover:text-blue-800 underline">返回首页</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
